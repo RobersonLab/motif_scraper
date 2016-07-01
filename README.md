@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/RobersonLab/motif_scraper.svg?branch=master)](https://travis-ci.org/RobersonLab/motif_scraper)
+
 # Motif Scraper
 Pythonic tool to search for degenerate motif matches in FASTA sequence files.
 

@@ -17,4 +17,6 @@ script: nosetests
 matrix:
   allow_failures:
    - python: "nightly"
+   - python: "3.6"
+   - python: "3.7"
    
