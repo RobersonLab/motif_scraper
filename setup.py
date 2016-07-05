@@ -9,7 +9,7 @@ setup(
 	author_email = 'dr.eli.roberson@gmail.com',
 	url = 'https://github.com/RobersonLab/motif_scraper',
 	license = 'MIT',
-	install_requires = ['pyfaidx', 'regex', 'six'],
+	install_requires = ['pyfaidx', 'regex>=2016.01.10', 'six'],
 	entry_points = {'console_scripts':["motif_scraper = motif_scraper.__main__:main"]},
 	test_suite = 'nose.collector',
 	tests_require = ['nose']
