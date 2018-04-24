@@ -25,6 +25,29 @@ git checkout vN.N.N # Choose highest version tag instead of vN.N.N
 
 pip install -e .
 ```
+## Testing local install
+
+The installation can be quickly checked for proper installation in a Linux-like environment that has wget. If necessary, first switch to the appropriate virtual environment. The following code snippet will download a test FASTA file containing only human contig KI270394.1 from the GRCh38 human genome build and search a simple exact motif.
+
+```bash
+wget https://raw.githubusercontent.com/RobersonLab/motif_scraper/master/sample_data/KI270394.fa
+motif_scraper --motif TTTGCA --outputFile test.csv KI270394.fa
+```
+
+The logging for the tool should list that 3 sites were found. You can confirm them with:
+
+```bash
+cat test.csv
+```
+
+which should display the following:
+
+```bash
+Contig,Start,End,Strand,Sequence,Motif
+KI270394.1,94,99,+,TTTGCA,TTTGCA
+KI270394.1,436,441,+,TTTGCA,TTTGCA
+KI270394.1,170,165,-,TTTGCA,TTTGCA
+```
 
 ## Usage
 
@@ -67,7 +90,7 @@ motif_scraper --loglevel DEBUG --cores 10 --motif TACCCTGTAGATCCGAATTTGTG --outp
 Search for all motifs contained in a file.
 
 ```bash
-motif_scraper --motif_file many_motifs.txt --outputFile many_motif_sites.csv GRCh38
+motif_scraper --motif_file many_motifs.txt --outputFile many_motif_sites.csv GRCh38.fa
 ```
 
 Directly input a valid regular expression instead of a sequence motif
