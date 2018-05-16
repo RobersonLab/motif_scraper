@@ -184,7 +184,7 @@ def fasta_motif_scan( fasta_fname, input_tuples, regex_ready=False, allow_overla
 	with pyfaidx.Fasta( fasta_fname, as_raw=True ) as FAIDX:
 		sequence = str( FAIDX[contig][start:end] ).upper()
 		
-		for m in regex_compiled.finditer( sequence, overlapping=allow_overlaps ):
+		for m in regex_compiled.finditer( sequence, overlapped=allow_overlaps ):
 			# self, motif, contig, positionStart, strand, regexMatch, molecule='dna'
 			tmp = SequenceMotif( motif_seq, contig, start, strand, m, molecule )
 			site_list.append( tmp )
