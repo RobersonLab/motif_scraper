@@ -25,6 +25,7 @@ def main():
 	parser.add_argument( '--valid_regex', help="Query is valid regex. *WILL NOT* reverse complement. Specify sequence and strand with careful consideration.", default=False, action='store_true' )
 	# molecule
 	parser.add_argument( '--search_strand', '-s', help="Default searches both strands, but can be set to only one.", choices=[ '+1', '-1', 'both' ], default='both' )
+	parser.add_argument( '--no_motif_overlaps', help="If this option is set it turns off overlapping motif matches.", default=True, action='store_false' )
 	parser.add_argument( "--loglevel", choices=[ 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL' ], default='INFO' )
 
 	args = parser.parse_args()
@@ -39,6 +40,8 @@ def main():
 	########################
 	# fix up input parsing #
 	########################
+	allow_overlapping_motifs = not args.no_motif_overlaps
+	
 	if args.search_strand == "both":
 		run_strands = ( '+', '-' )
 	elif args.search_strand == '-1':
@@ -81,6 +84,7 @@ def main():
 	options += "Output file: %s\n" % ( args.outputFile )
 	options += "Regions: %s\n" % ( "All contigs" if args.region is None else str( args.region ) )
 	options += "Motifs are valid regex (no processing): %s\n" % ( str( args.valid_regex ) )
+	options += "Allow overlapping motifs?: %s\n" % ( str( allow_overlapping_motifs ) )
 	options += "Processes: %s\n" % ( args.cores ) # cores
 	options += "Log level: %s\n" % ( str( args.loglevel ) )
 	
@@ -116,7 +120,7 @@ def main():
 	# async process the contigs #
 	#############################
 	work_pool = mp.Pool( processes=args.cores )
-	working_data = [ work_pool.apply_async( fasta_motif_scan, args=( args.fastaFile, x, args.valid_regex ) ) for x in region_list ]
+	working_data = [ work_pool.apply_async( fasta_motif_scan, args=( args.fastaFile, x, args.valid_regex, allow_overlapping_motifs ) ) for x in region_list ]
 	work_output = [ x.get() for x in working_data ]
 	
 	##############################

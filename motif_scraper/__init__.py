@@ -19,7 +19,7 @@ import time
 ####################
 __script_path__ = sys.argv[0]
 __script_name__ = __script_path__.split('/')[-1].split('\\')[-1]
-__version__ = '1.0.0'
+__version__ = '1.0.1'
 
 ########
 # fxns #
@@ -143,7 +143,7 @@ class SequenceMotif:
 ######################
 # fxns using classes #
 ######################
-def fasta_motif_scan( fasta_fname, input_tuples, regex_ready=False, molecule='dna'  ):
+def fasta_motif_scan( fasta_fname, input_tuples, regex_ready=False, allow_overlaps=True, molecule='dna'  ):
 	"""
 	fasta_fname = string path to FASTA file
 	input_tuples = tuple containing (1) motif sequence, (2) contig name, (3) start position*, (4) end position, (5) strand to search
@@ -184,7 +184,7 @@ def fasta_motif_scan( fasta_fname, input_tuples, regex_ready=False, molecule='dn
 	with pyfaidx.Fasta( fasta_fname, as_raw=True ) as FAIDX:
 		sequence = str( FAIDX[contig][start:end] ).upper()
 		
-		for m in regex_compiled.finditer( sequence ):
+		for m in regex_compiled.finditer( sequence, overlapping=allow_overlaps ):
 			# self, motif, contig, positionStart, strand, regexMatch, molecule='dna'
 			tmp = SequenceMotif( motif_seq, contig, start, strand, m, molecule )
 			site_list.append( tmp )
