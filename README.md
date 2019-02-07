@@ -81,6 +81,14 @@ Search an Ensembl download of all protein coding transcript 3' UTRs for hsa-miR-
 motif_scraper --cores 10 --motif TACCCTGTAGATCCGAATTTGTG --outputFile mir10a_sites.csv --search_strand=-1 GRCh38_3pUTRs.fa
 ```
 
+Search an Ensembl download of all protein coding transcript 3' UTRs for hsa-miR-10a sites on minus strand, again.
+But this time print output to temporary file per contig / strand. Combines and removes the temporary files last.
+Produces identical md5 sum to memory buffering all sites first, but works on low memory machines.
+
+```bash
+motif_scraper --file_buffer --cores 10 --motif TACCCTGTAGATCCGAATTTGTG --outputFile mir10a_sites.csv --search_strand=-1 GRCh38_3pUTRs.fa
+```
+
 Get debugging messages to troubleshoot code problems.
 
 ```bash

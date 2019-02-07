@@ -12,6 +12,7 @@ import pyfaidx
 import regex
 import six
 import sys
+import tempfile
 import time
 
 ####################
@@ -19,7 +20,7 @@ import time
 ####################
 __script_path__ = sys.argv[0]
 __script_name__ = __script_path__.split('/')[-1].split('\\')[-1]
-__version__ = '1.0.1'
+__version__ = '1.0.2'
 
 ########
 # fxns #
@@ -143,7 +144,7 @@ class SequenceMotif:
 ######################
 # fxns using classes #
 ######################
-def fasta_motif_scan( fasta_fname, input_tuples, regex_ready=False, allow_overlaps=True, molecule='dna'  ):
+def fasta_motif_scan( fasta_fname, input_tuples, regex_ready=False, allow_overlaps=True, file_buffer=False, molecule='dna' ):
 	"""
 	fasta_fname = string path to FASTA file
 	input_tuples = tuple containing (1) motif sequence, (2) contig name, (3) start position*, (4) end position, (5) strand to search
@@ -162,6 +163,15 @@ def fasta_motif_scan( fasta_fname, input_tuples, regex_ready=False, allow_overla
 		raise( TypeError( "In fasta_motif_scan, input_tuples should be a tuple!" ) )
 	elif not type( regex_ready ) is bool:
 		raise( TypeError( "In fasta_motif_scan, regex_ready should be a bool!" ) )
+	elif not type( file_buffer ) is bool:
+		raise( TypeError( "In fasta_motif_scan, file_buffer should be a bool!" ) )
+		
+	#######################################
+	# deal with temporary files if needed #
+	#######################################
+	if file_buffer == True:
+		TMPFILE = tempfile.NamedTemporaryFile( delete = False )
+		return_name = TMPFILE.name
 	
 	#########################
 	# setup some local vars #
@@ -179,7 +189,15 @@ def fasta_motif_scan( fasta_fname, input_tuples, regex_ready=False, allow_overla
 		elif strand == '-':
 			regex_compiled = regex.compile( rev_comp( motif_seq, molecule ) )
 	
-	site_list = []
+	#######
+	# run #
+	#######
+	site_count = 0
+	
+	if file_buffer == True:
+		site_list = None
+	else:
+		site_list = []
 	
 	with pyfaidx.Fasta( fasta_fname, as_raw=True ) as FAIDX:
 		sequence = str( FAIDX[contig][start:end] ).upper()
@@ -187,9 +205,18 @@ def fasta_motif_scan( fasta_fname, input_tuples, regex_ready=False, allow_overla
 		for m in regex_compiled.finditer( sequence, overlapped=allow_overlaps ):
 			# self, motif, contig, positionStart, strand, regexMatch, molecule='dna'
 			tmp = SequenceMotif( motif_seq, contig, start, strand, m, molecule )
-			site_list.append( tmp )
+			
+			site_count += 1
+			
+			if file_buffer == True:
+				TMPFILE.write( "%s\n" % ( tmp ) )
+			else:
+				site_list.append( tmp )
 	
-	return ( input_tuples, site_list )
+	if file_buffer == True:
+		return( input_tuples, None, return_name, site_count )
+	else:
+		return ( input_tuples, site_list, None, site_count )
 	
 ########
 # main #

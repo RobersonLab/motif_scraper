@@ -1,9 +1,11 @@
 import argparse
 import logging
 import multiprocessing as mp
+import os
 import pyfaidx
 import regex
 import six
+import shutil
 import sys
 import time
 
@@ -26,6 +28,8 @@ def main():
 	# molecule
 	parser.add_argument( '--search_strand', '-s', help="Default searches both strands, but can be set to only one.", choices=[ '+1', '-1', 'both' ], default='both' )
 	parser.add_argument( '--no_motif_overlaps', help="If this option is set it turns off overlapping motif matches.", default=True, action='store_false' )
+	parser.add_argument( '--file_buffer', help="On low memory systems a file buffer can be used, which is slower by has low memory requirements.", default=False, action='store_true' )
+	parser.add_argument( '--copy_buffer_size', help="Size of buffer (MB) for file copy", type=int, default=10 )
 	parser.add_argument( "--loglevel", choices=[ 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL' ], default='INFO' )
 
 	args = parser.parse_args()
@@ -41,6 +45,8 @@ def main():
 	# fix up input parsing #
 	########################
 	allow_overlapping_motifs = not args.no_motif_overlaps
+	use_file_buffer = args.file_buffer
+	file_buffer_size = args.copy_buffer_size * 1024 * 1024
 	
 	if args.search_strand == "both":
 		run_strands = ( '+', '-' )
@@ -86,6 +92,9 @@ def main():
 	options += "Motifs are valid regex (no processing): %s\n" % ( str( args.valid_regex ) )
 	options += "Allow overlapping motifs?: %s\n" % ( str( allow_overlapping_motifs ) )
 	options += "Processes: %s\n" % ( args.cores ) # cores
+	options += "Buffering: %s\n" % ( "Memory" if not args.file_buffer else "File" )
+	if args.file_buffer:
+		options += "File copy buffer size (MB): %s\n" % ( args.copy_buffer_size )
 	options += "Log level: %s\n" % ( str( args.loglevel ) )
 	
 	logger.info( options )
@@ -120,23 +129,27 @@ def main():
 	# async process the contigs #
 	#############################
 	work_pool = mp.Pool( processes=args.cores )
-	working_data = [ work_pool.apply_async( fasta_motif_scan, args=( args.fastaFile, x, args.valid_regex, allow_overlapping_motifs ) ) for x in region_list ]
+	working_data = [ work_pool.apply_async( fasta_motif_scan, args=( args.fastaFile, x, args.valid_regex, allow_overlapping_motifs, use_file_buffer ) ) for x in region_list ]
 	work_output = [ x.get() for x in working_data ]
 	
 	##############################
 	# figure order out           #
 	# b/c executed asyncronously #
 	##############################
+	site_count = 0
+	
 	result_order = []
 	
 	for reg in region_list:
 		index = 0
 		
-		for out, dict in work_output:
+		for out, dict, fname, current_site_count in work_output:
 			if out == reg:
 				logger.debug( "Returned result %s matches %s" % ( index, ' '.join( [ str(x) for x in reg ] ) ) )
 				
 				result_order.append( index )
+				site_count += current_site_count
+				
 				break
 			else:
 				index += 1
@@ -144,21 +157,28 @@ def main():
 	if len( result_order ) != len( region_list ):
 		logger.critical( "Did not find results for all requested regions" )
 		sys.exit( 1 )
-			
+	
 	#################
 	# write outputs #
 	#################
-	site_count = 0
-	
-	with open( args.outputFile, 'w' ) as OUTFH:
-		# self.contig, self.start, self.end, self.strand, self.seq, self.motif
-		OUTFH.write( "Contig,Start,End,Strand,Sequence,Motif\n" )
-		
-		for idx in result_order:
-			for site in work_output[idx][1]:
-				OUTFH.write( "%s\n" % ( site ) )
-				
-				site_count += 1
+	if use_file_buffer == True:
+		with open( args.outputFile, 'wb' ) as OUTFH:
+			# self.contig, self.start, self.end, self.strand, self.seq, self.motif
+			OUTFH.write( "Contig,Start,End,Strand,Sequence,Motif\n" )
+			
+			for idx in result_order:
+				curr_fname = work_output[idx][2]
+				with open( curr_fname, 'rb' ) as COPYINPUT:
+					shutil.copyfileobj( COPYINPUT, OUTFH, file_buffer_size )
+				os.remove( curr_fname )
+	else:
+		with open( args.outputFile, 'w' ) as OUTFH:
+			# self.contig, self.start, self.end, self.strand, self.seq, self.motif
+			OUTFH.write( "Contig,Start,End,Strand,Sequence,Motif\n" )
+			
+			for idx in result_order:
+				for site in work_output[idx][1]:
+					OUTFH.write( "%s\n" % ( site ) )
 
 	logger.info( "%s total sites found" % ( site_count ) )
 
