@@ -3,7 +3,7 @@ from setuptools import setup
 setup(
 	name = "motif_scraper",
 	packages = ['motif_scraper'],
-	version = "1.0.2",
+	version = "1.0.3",
 	description = 'Tool for finding degenerate motifs in FASTA files',
 	author = "Elisha Roberson",
 	author_email = 'dr.eli.roberson@gmail.com',
