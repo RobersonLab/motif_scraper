@@ -20,69 +20,69 @@ import time
 ####################
 __script_path__ = sys.argv[0]
 __script_name__ = __script_path__.split('/')[-1].split('\\')[-1]
-__version__ = '1.0.2'
+__version__ = '1.0.3'
 
 ########
 # fxns #
-########	
+########
 def rev_comp( seq, molecule='dna' ):
 	""" DNA|RNA seq -> reverse complement
 	"""
-	
+
 	if molecule == 'dna':
 		nuc_dict = { "A":"T", "B":"V", "C":"G", "D":"H", "G":"C", "H":"D", "K":"M", "M":"K", "N":"N", "R":"Y", "S":"S", "T":"A", "V":"B", "W":"W", "Y":"R" }
 	elif molecule == 'rna':
 		nuc_dict = { "A":"U", "B":"V", "C":"G", "D":"H", "G":"C", "H":"D", "K":"M", "M":"K", "N":"N", "R":"Y", "S":"S", "U":"A", "V":"B", "W":"W", "Y":"R" }
 	else:
 		raise ValueError( "rev_comp requires molecule to be dna or rna" )
-	
+
 	if not isinstance( seq, six.string_types ):
 		raise TypeError( "seq must be a string!" )
-	
+
 	return ''.join( [ nuc_dict[c] for c in seq.upper()[::-1] ] )
 
 def make_degenerate_regex( motif_seq, molecule='dna' ):
 	""" Degenerate sequence -> regex
 	Example: NNYCGAARN -> [ACGT]{2}[CT]CGA{2}[AG][ACGT]
 	"""
-	
+
 	if not isinstance( motif_seq, six.string_types ):
 		raise TypeError( "motif_seq must be a string!" )
-		
+
 	if molecule == 'dna':
 		degenerate_code = { "A":"A", "B":"[CGT]", "C":"C", "D":"[AGT]", "G":"G", "H":"[ACT]", "K":"[GT]", "M":"[AC]", "N":"[ACGT]", "R":"[AG]", "S":"[GC]", "T":"T", "V":"[ACG]", "W":"[AT]", "Y":"[CT]" }
 	elif molecule == 'rna':
 		degenerate_code = { "A":"A", "B":"[CGU]", "C":"C", "D":"[AGU]", "G":"G", "H":"[ACU]", "K":"[GU]", "M":"[AC]", "N":"[ACGU]", "R":"[AG]", "S":"[GC]", "U":"U", "V":"[ACG]", "W":"[AU]", "Y":"[CU]" }
 	else:
 		raise ValueError( "make_degenerate_regex requires molecule to be dna or rna" )
-	
+
 	regex_string = ''
-	
+
 	idx = 0
-	
+
 	while idx < len( motif_seq ):
 		curr = motif_seq[idx]
-		
+
 		count = 1
-		
+
 		for next_idx in range( idx+1, len( motif_seq ) ):
 			next = motif_seq[next_idx]
-			
+
 			if next == curr:
 				count += 1
 			else:
 				break
-		
+
 		regex_string += degenerate_code[curr]
-		
+
 		if count > 1:
 			idx = idx + count - 1
 			regex_string += "{%s}" % ( count )
-		
+
 		idx += 1
-	
+
 	return regex_string
-	
+
 ###########
 # classes #
 ###########
@@ -94,10 +94,10 @@ class SequenceMotif:
 	positionStart = first base of the match*
 	strand = +|- strand of match relative to FASTA sequence
 	regexMatch = the regex match
-	
+
 	*positionStart is expected to be 0-base. Very important!
 	"""
-	
+
 	def __init__( self, motif, contig, positionStart, strand, regexMatch, molecule='dna', regex_match_start=None, regex_end_val=None, regex_group_sequence=None ):
 		if regexMatch is not None:
 			if strand == '+':
@@ -121,20 +121,20 @@ class SequenceMotif:
 				self.start = self.end + len( self.seq ) - 1
 			else:
 				raise ValueError( "SequenceMotif classes require strand to be either '+' or '-'" )
-		
+
 		self.motif = motif
 		self.contig = contig
 		self.strand = strand
-	
+
 	def __str__( self ):
 		""" string interpolation for file writing as a CSV
 		"""
-		
+
 		return "%s,%s,%s,%s,%s,%s" % ( self.contig, self.start, self.end, self.strand, self.seq, self.motif )
-		   
+
 	def __repr__( self ):
 		return str( self )
-	
+
 	def __eq__( self, other ):
 		if self.motif == other.motif and self.contig == other.contig and self.strand == other.strand and self.start == other.start and self.end == other.end and self.seq == other.seq:
 			return True
@@ -148,10 +148,10 @@ def fasta_motif_scan( fasta_fname, input_tuples, regex_ready=False, allow_overla
 	"""
 	fasta_fname = string path to FASTA file
 	input_tuples = tuple containing (1) motif sequence, (2) contig name, (3) start position*, (4) end position, (5) strand to search
-	
+
 	*start is expected to be 0-base, end is expected to be 1-base
 	"""
-	
+
 	###################
 	# validity checks #
 	###################
@@ -165,19 +165,19 @@ def fasta_motif_scan( fasta_fname, input_tuples, regex_ready=False, allow_overla
 		raise( TypeError( "In fasta_motif_scan, regex_ready should be a bool!" ) )
 	elif not type( file_buffer ) is bool:
 		raise( TypeError( "In fasta_motif_scan, file_buffer should be a bool!" ) )
-		
+
 	#######################################
 	# deal with temporary files if needed #
 	#######################################
 	if file_buffer == True:
 		TMPFILE = tempfile.NamedTemporaryFile( delete = False )
 		return_name = TMPFILE.name
-	
+
 	#########################
 	# setup some local vars #
 	#########################
 	motif_seq, contig, start, end, strand = input_tuples
-	
+
 	if regex_ready == False:
 		if strand == '+':
 			regex_compiled = regex.compile( make_degenerate_regex( motif_seq ) )
@@ -188,39 +188,38 @@ def fasta_motif_scan( fasta_fname, input_tuples, regex_ready=False, allow_overla
 			regex_compiled = regex.compile( motif_seq )
 		elif strand == '-':
 			regex_compiled = regex.compile( rev_comp( motif_seq, molecule ) )
-	
+
 	#######
 	# run #
 	#######
 	site_count = 0
-	
+
 	if file_buffer == True:
 		site_list = None
 	else:
 		site_list = []
-	
+
 	with pyfaidx.Fasta( fasta_fname, as_raw=True ) as FAIDX:
 		sequence = str( FAIDX[contig][start:end] ).upper()
-		
+
 		for m in regex_compiled.finditer( sequence, overlapped=allow_overlaps ):
 			# self, motif, contig, positionStart, strand, regexMatch, molecule='dna'
 			tmp = SequenceMotif( motif_seq, contig, start, strand, m, molecule )
-			
+
 			site_count += 1
-			
+
 			if file_buffer == True:
 				TMPFILE.write( "%s\n" % ( tmp ) )
 			else:
 				site_list.append( tmp )
-	
+
 	if file_buffer == True:
 		return( input_tuples, None, return_name, site_count )
 	else:
 		return ( input_tuples, site_list, None, site_count )
-	
+
 ########
 # main #
 ########
 if __name__ == "__main__":
 	pass
-	
